@@ -8,6 +8,7 @@ from .rescue import RescueManager
 from .speed import SpeedController
 from .nitrodrift import NitroDrift
 from .banana_detection import Banana
+from .esquive_adv import esquiveadv
 
 
 class Agent4(KartAgent):
@@ -27,6 +28,8 @@ class Agent4(KartAgent):
         self.dodge_side = 0
         self.dodge_timer = 0
         self.last_banana_z = float("inf")
+        self.esquive_adv =esquiveadv()
+        
         
     def reset(self):
         self.obs, _ = self.env.reset()
@@ -82,7 +85,7 @@ class Agent4(KartAgent):
                     self.last_banana_z = b_z
         
         is_dodging = False
-        
+
         if self.dodge_timer >0:
             self.dodge_timer -= 1 # On decremente le compteur
             is_dodging = True # Variable representant l'etat "est en train d'esquiver"
@@ -92,9 +95,20 @@ class Agent4(KartAgent):
             gx += esquive * self.dodge_side # On ajoute l'esquive à x
 
             steering = self.steering.manage_pure_pursuit(gx,gz,4.0) # Appel à la fonction pure_pursuit avec un gain moindre pour baisser la nervosité
+        
+        else :
 
-        else:
-            steering = self.steering.manage_pure_pursuit(gx,gz,6.0) # Appel à la fonction pure_pursuit en condition normale (pas de danger detecté)
+            danger2,a_x,a_z= self.esquive_adv.esquive_adv(obs)
+        
+            if danger2:
+                if a_x>=0:
+                    gx=gx-2
+                else:
+                    gx=gx+2
+        
+                steering = self.steering.manage_pure_pursuit(gx,gz,6.0) # Appel à la fonction pure_pursuit en condition normale (pas de danger detecté)
+            else:
+                steering = self.steering.manage_pure_pursuit(gx,gz,6.0)
         
         distance = float(obs.get("distance_down_track", [0.0])[0])
         vel = obs.get("velocity", [0.0, 0.0, 0.0])
