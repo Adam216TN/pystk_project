@@ -98,13 +98,13 @@ class Agent4(KartAgent):
         
         else :
 
-            danger2,a_x,a_z= self.esquive_adv.esquive_adv(obs)
+            danger_adv,a_x,a_z= self.esquive_adv.esquive_adv(obs)
         
-            if danger2:
+            if danger_adv:
                 if a_x>=0:
-                    gx=gx-2
+                    gx=gx-2.5
                 else:
-                    gx=gx+2
+                    gx=gx+2.5
         
                 steering = self.steering.manage_pure_pursuit(gx,gz,6.0) # Appel à la fonction pure_pursuit en condition normale (pas de danger detecté)
             else:
