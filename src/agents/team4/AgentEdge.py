@@ -5,9 +5,11 @@ class AgentEdge:
     """
     Module Agent Expert Edge : Empêche la sortie de piste en surveillant la distance par rapport au centre.
     """
-    def __init__(self,config : DictConfig ,config_pilote : DictConfig):
+    def __init__(self, wrapped_pilot, config : DictConfig ,config_pilote : DictConfig):
 
         """Initialise les variables d'instances de l'agent expert"""
+        
+        self.pilot = wrapped_pilot
      
         self.conf = config
         """@private"""
@@ -17,25 +19,25 @@ class AgentEdge:
     def reset(self) -> None:
 
         """Réinitialise les variables d'instances de l'agent expert"""
-        
+        self.pilot.reset()
         self.pilotage.reset()
 
-    def choose_action(self, obs : dict, gx : float, gz : float) -> tuple[bool,dict]:
+    def choose_action(self, obs : dict) -> dict:
         """
         Analyse la position latérale et corrige si nécessaire
 
         Args:
 
             obs(dict) : Les données de télémétrie fournies par le simulateur.
-            gx(float) : Décalage latéral de la cible.
-            gz(float) : Profondeur de la cible.
 
         Returns:
 
-            bool : Variable affirmant ou non la nécessite de se réaxer.
             dict : Dictionnaire d'actions à réaliser pour se réaxer.
 
         """
+        # 1. On récupère l'action calculée par les wrappers du dessous
+        action = self.pilot.choose_action(obs)
+
         # Récupération des données de piste
         cpd_raw = obs.get("center_path_distance", 0.0)
         center_path_distance = cpd_raw[0]
@@ -51,7 +53,19 @@ class AgentEdge:
         # Vérification de la sortie de piste imminente
         if self.conf.epsilon_limite_min <= marge_securite <= self.conf.epsilon_limite_max :
 
+            #  SÉCURITÉ WRAPPER
+            # Si on frôle le vide, on annule les esquives des autres agents en dessous
+            self.pilot.reset()
+
             #print(f"Limite de sortie = {marge_securite}")
+            
+            # Recalcul de gx et gz directement depuis les observations
+            points = obs.get("paths_start", [])
+            if len(points) > 2:
+                gx = points[2][0]
+                gz = points[2][2]
+            else:
+                gx, gz = 0.0, 1.0 # Valeurs de sécurité
             
             #print(gx)
             #print(center_path_distance)
@@ -69,17 +83,9 @@ class AgentEdge:
 
             steer = self.pilotage.manage_pure_pursuit(gx,gz,self.conf.gain)
 
-            action = {
-            "acceleration": new_accel,
-            "steer": steer,
-            "brake": False,
-            "drift": False,
-            "nitro": False,
-            "rescue":False,
-            "fire": False,
-            } 
+            action["acceleration"] = new_accel
+            action["steer"] = steer
+            action["drift"] = False
             
-            return True, action
-
-        # Pas de danger, on laisse le pilote principal gérer
-        return False, {}
+        # On renvoie le dictionnaire (modifié si danger, sinon dictionnaire de base intact)
+        return action
