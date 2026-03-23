@@ -6,15 +6,15 @@ class AgentNitro:
     Module Agent Expert Nitro : Gère la logique d'activation du nitro
     """
     
-    def __init__(self,config : DictConfig) -> None:
+    def __init__(self,wrapped_pilot,config : DictConfig) -> None:
         """Initialise les variables d'instances de l'agent."""
-        
+        self.pilot=wrapped_pilot
         self.c = config
         """@private"""
 
     def reset(self) -> None:
         """Réinitialise les variables d'instances de l'agent expert"""
-        pass
+        self.pilot.reset()
     
     def manage_nitro(self,obs : dict,steer : float,energy : float) -> bool:
 
@@ -44,6 +44,14 @@ class AgentNitro:
         if (energy > self.c.seuil_energy and abs(steer) < self.c.seuil_steer and abs(target_now)<= self.c.seuil_target_now and abs(target_soon) <= self.c.seuil_target_soon and target_late <= self.c.seuil_target_late):
             nit = True
         return nit
+    def choose_action(self,obs)->dict:
+        action=self.pilot.choose_action(obs)
 
+        steer=action["steer"]
+        energy=float(obs.get("energy",[0.0])[0])
+
+        if self.manage_nitro(obs,steer,energy):
+            action["nitro"]=True
+        return action
 
     

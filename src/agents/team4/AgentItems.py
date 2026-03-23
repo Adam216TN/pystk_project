@@ -5,10 +5,10 @@ class AgentItems:
     
     """Module Agent Expert Item : Gère la logique d'utilisation des différents items"""
     
-    def __init__(self,config : DictConfig ,config_pilote : DictConfig) -> None:
+    def __init__(self,wrapped_pilot,config : DictConfig ,config_pilote : DictConfig) -> None:
         
         """Initialise les variables d'instances de l'agent expert"""
-        
+        self.pilot=wrapped_pilot
         self.steerer = Steering(config_pilote)
         """@private"""
         self.c = config
@@ -17,7 +17,7 @@ class AgentItems:
     def reset(self):
 
         """Réinitialise les variables d'instances de l'agent expert"""
-        
+        self.pilot.reset()
         self.steerer.reset()
     
     def use_items(self, obs : dict, steer : float) -> tuple[bool,float]:
@@ -67,3 +67,17 @@ class AgentItems:
 
         # Nothing
         return False, steer
+
+    def choose_action(self,obs:dict)->dict:
+        
+        action=self.pilot.choose_action(obs)
+
+        current_steer=action["steer"]
+
+        fire,new_steer=self.use_items(obs,current_steer)
+
+        action["steer"]=new_steer
+        action["fire"]=fire
+
+        return action
+
