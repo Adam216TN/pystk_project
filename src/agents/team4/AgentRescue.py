@@ -68,7 +68,7 @@ class AgentRescue:
         
         return self.times_blocked >= self.c.seuil_blocked_trigger
 
-    def choose_action(self, current_steer : float, speed : float, distance : float) -> tuple[bool,dict]:
+    def choose_action(self, obs) -> dict:
         """
         Gère la réaction à un blocage
 
@@ -83,11 +83,16 @@ class AgentRescue:
             bool : Permet de confirmer la détection d'un blocage de l'agent.
             dict : Dictionnaire d'actions à effectué pour sortir d'un blocage.
         """
-    
+        action=self.pilot.choose_action(obs)
+        distance = float(obs.get("distance_down_track", [0.0])[0])
+        vel = obs.get("velocity", [0.0, 0.0, 0.0])
+        speed = float(vel[2])
+        current_steer = action["steer"]
         stuck = self.is_stuck(distance,speed)
 
         if stuck or self.recovery_cd > 0:
-            
+            self.pilot.reset()
+
             if self.recovery_cd > 0:
                 self.recovery_cd -= 1 #Si on est déjà en recovery on continue dans le même sens
 
@@ -101,17 +106,13 @@ class AgentRescue:
                 
                 
                 self.recovery_cd = self.recovery_timer #on relance le cooldown
+            action["acceleration"]=0.0
+            action["steer"]=self.recovery_steer
+            action["brake"]=True
+            action["drift"]=False
+            action["nitro"]=False
+            action["rescue"]=True
+            action["fire"]=False
             
-            action = {
-            "acceleration": 0.0,
-            "steer": self.recovery_steer,
-            "brake": True,
-            "drift": False,
-            "nitro": False,
-            "rescue": False,
-            "fire": False,
-            }
-
-            return True, action
         
-        return False, {}
+        return action

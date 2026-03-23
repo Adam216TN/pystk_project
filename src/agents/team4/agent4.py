@@ -81,8 +81,6 @@ class BasePilot:
         if road_straight and abs(steering) <= epsilon:
             steering = 0.0
 
-        fire, steering = self.expert_items.use_items(obs, steering)
-
         # CRÉATION DU DICTIONNAIRE DE BASE
         return {
             "acceleration": acceleration,
