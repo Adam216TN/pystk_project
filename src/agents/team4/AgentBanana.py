@@ -9,10 +9,11 @@ class AgentBanana:
     Module Agent Expert Banana : Gère la logique de détection et de réaction face aux bananes et chewing-gum
     """
     
-    def __init__(self,config : DictConfig ,config_pilote : DictConfig) -> None:
+    def __init__(self,wrapped_pilot,config : DictConfig ,config_pilote : DictConfig) -> None:
         
         """Initialise les variables d'instances de l'agent expert"""
-        
+        self.pilot=wrapped_pilot
+
         self.c = config
         """@private"""
         self.dodge_side = 0
@@ -31,7 +32,7 @@ class AgentBanana:
     def reset(self) -> None:
         
         """Réinitialise les variables d'instances de l'agent expert"""
-        
+        self.pilot.reset()
         self.dodge_side = 0
         self.dodge_timer = 0
         self.lock_mode = None
@@ -130,7 +131,7 @@ class AgentBanana:
             return "SINGLE",first_x,banana # Cas d'une seule banane
         
         
-    def choose_action(self,obs : dict,gx : float ,gz : float,acceleration : float) -> tuple[bool,dict]:
+    def choose_action(self,obs : dict) -> dict:
 
         """
         
@@ -149,8 +150,14 @@ class AgentBanana:
             dict : Le dictionnaire d'actions à réaliser pour esquiver une banane.
         
         """
+        action=self.pilot.choose_action(obs)
 
         points = obs['paths_start'] # Récupération des points
+        if len(points)>2:
+            gx=points[2][0]
+            gz=points[2][2]
+        else:
+            gx,gz=0.0,1.0
 
         courbe = compute_curvature(points[:self.c.nb_noeuds]) # Calcul de la courbe
         
@@ -171,13 +178,15 @@ class AgentBanana:
 
         if mode == "CLEAR" and self.dodge_timer <= 0:
             self.lock_mode = None # On réinitialise l'état
-            return False, {}
+            return action
         
         # Si la banane esseulée est trop loin de l'agent, on ne la regarde pass
         if mode == "SINGLE" and abs(b_x) >= self.c.limite_banane_single and self.lock_mode != "LIGNE":
             if self.dodge_timer <= 0:
-                return False, {}
-        
+                return action
+        # On force l'annulation du comportement de l'adversaire ou du drift en dessous
+        self.pilot.reset()
+
         if mode == "SINGLE" and self.lock_mode != "LIGNE": # Si on a capte un cas d'une banane seule et qu'on était pas déjà dans une situation d'esquive de barrage
 
             #print(banana_list)
@@ -244,15 +253,8 @@ class AgentBanana:
 
         # Appel de la fonction de steering avec les paramètres modifiés.
         steering = self.pilotage.manage_pure_pursuit(gx,gz,gain_volant)
+        action["drift"]=False
+        action["steer"]=steering
+        
 
-        action = {
-            "acceleration": acceleration,
-            "steer": steering,
-            "brake": False,
-            "drift": False,
-            "nitro": False,
-            "rescue":False,
-            "fire": False,
-        }
-
-        return True,action
+        return action
