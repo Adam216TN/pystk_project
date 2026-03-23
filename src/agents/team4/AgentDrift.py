@@ -5,10 +5,12 @@ class AgentDrift:
     
     """Module Agent Expert Drift : Gère la logique d'activation du drift"""
     
-    def __init__(self,config : DictConfig) -> None:
+    def __init__(self,wrapped_pilot,config : DictConfig) -> None:
         
         """Initialise les variables d'instances de l'agent expert"""
         
+        self.pilot=wrapped_pilot
+
         self.timer = 0
         """@private"""
         self.cooldown = 0
@@ -19,7 +21,7 @@ class AgentDrift:
     def reset(self) -> None:
         
         """Réinitialise les variables d'instances de l'agent expert"""
-        
+        self.pilot.reset()
         self.timer = 0
         self.cooldown = 0
     
@@ -64,7 +66,7 @@ class AgentDrift:
 
         return False
 
-    def choose_action(self, obs : dict, steer : float, vel : list) -> tuple[bool,float]:
+    def choose_action(self, obs : dict) -> dict:
 
         """
         Gère la logique d'activation du drift
@@ -81,6 +83,7 @@ class AgentDrift:
             float : Angle de braquage des roues modifié.
         
         """
+        action = self.pilot.choose_action(obs)
 
         #Appel de la fonction qui affirme si le drift est possible
         trigger = self.must_drift(obs, steer, vel)
@@ -94,10 +97,12 @@ class AgentDrift:
             self.timer -= 1
             if self.timer == 0:
                 self.cooldown = self.c.cooldown_start 
-            return True, adjusted_steer
+            action["drift"]=True
+            action["steer"]=adjusted_steer
+            return action
         
         # Système de cooldown pour eviter d'enchainer les drifts
         if self.cooldown > 0:
             self.cooldown -= 1
             
-        return False, steer
+        return action 
