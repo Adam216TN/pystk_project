@@ -7,10 +7,10 @@ class AgentEsquiveAdv:
     Module Agent Expert Esquive Adversaire : Gère la logique de détection d'adversaires et de dépassement
     """
     
-    def __init__(self,config : DictConfig ,config_pilote : DictConfig) -> None:
+    def __init__(self,wrapped_pilot,config : DictConfig ,config_pilote : DictConfig) -> None:
         
         """Initialise les variables d'instances de l'agent expert"""
-        
+        self.pilot=wrapped_pilot
         self.c = config
         """@private"""
         self.pilotage = Steering(config_pilote)
@@ -19,6 +19,7 @@ class AgentEsquiveAdv:
     def reset(self) -> None:
 
         """Réinitialise les variables d'instances de l'agent expert"""
+        self.pilot.reset()
         self.pilotage.reset()
         
     def esquive_adv(self,obs : dict) -> tuple[bool,float,float]:
@@ -49,7 +50,7 @@ class AgentEsquiveAdv:
         return devant,adv[0],adv[2]
     
 
-    def choose_action(self,obs : dict,gx : float,gz : float,acceleration : float) -> tuple[bool,dict]:
+    def choose_action(self,obs : dict) -> dict:
 
         """
         
@@ -68,10 +69,21 @@ class AgentEsquiveAdv:
             dict : Le dictionnaire d'actions à réaliser pour esquiver un adversaire.
         
         """
-        
+        action = self.pilot.choose_action(obs)
+
         danger_adv, a_x,a_z = self.esquive_adv(obs)
             
         if danger_adv:
+
+            self.pilot.reset()
+            
+            points = obs.get("paths_start", [])
+            if len(points) > 2:
+                gx = points[2][0]
+                gz = points[2][2]
+            else:
+                gx, gz = 0.0, 1.0
+            
             if a_x >= 0:
                 gx -= self.c.decalage_lateral # On se décale à gauche 
             else:
@@ -79,15 +91,7 @@ class AgentEsquiveAdv:
             
             gain_volant = self.c.default_gain
             steering = self.pilotage.manage_pure_pursuit(gx,gz,gain_volant)
-            action = {
-            "acceleration": acceleration,
-            "steer": steering,
-            "brake": False,
-            "drift": False,
-            "nitro": False,
-            "rescue":False,
-            "fire": False,
-            }
-            return True, action
+            action["steer"]=steering
+            action["drift"] = False
         
-        return False, {}
+        return action
