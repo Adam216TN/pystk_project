@@ -29,15 +29,12 @@ class BasePilot:
         self.c = config.main_agent
         self.steering = Steering(config.steering)
         self.speedcontroller = SpeedController(config.speed)
-        self.expert_nitro = AgentNitro(config.nitro)
-        self.expert_items = AgentItems(config.powerup_type, config.steering)
 
     def reset(self) -> None:
         """Réinitialise les outils de base."""
         self.steering.reset()
         self.speedcontroller.reset()
-        self.expert_nitro.reset()
-        self.expert_items.reset()
+    
 
     def choose_action(self, obs: dict) -> dict:
         """Calcule la trajectoire normale et génère le dictionnaire initial."""
@@ -60,14 +57,11 @@ class BasePilot:
         gz = target[2]
 
         distance = float(obs.get("distance_down_track", [0.0])[0])
-        vel = obs.get("velocity", [0.0, 0.0, 0.0])
-        energy = float(obs.get("energy", [0.0])[0])
 
         gain_volant = self.c.default_gain
         steering = self.steering.manage_pure_pursuit(gx, gz, gain_volant)
         
         acceleration, brake = self.speedcontroller.manage_speed(obs)
-        nitro = self.expert_nitro.manage_nitro(obs, steering, energy)
         
         # Au depart on avance tout droit pour eviter de se cogner contre les adversaires
         if distance <= self.c.seuil_distance:
@@ -94,10 +88,90 @@ class BasePilot:
             "acceleration": acceleration,
             "steer": steering,
             "brake": brake,
-            "drift": False,  # Initialisé à False, l'AgentDrift le modifiera si besoin
-            "nitro": nitro,
-            "rescue": False, # Initialisé à False, l'AgentRescue le modifiera si besoin
-            "fire": fire,
+            "drift": False,   
+            "nitro": False,
+            "rescue": False, 
+            "fire": False,
         }
 
 
+class Agent4(KartAgent):
+    """
+    Module Agent4 : Agent coordinateur (Pattern Decorator).
+    Fait appel aux différents wrappers pour gérer la logique générale de pilotage.
+    """
+
+    def __init__(self, env, path_lookahead=2):
+        """Initialise les variables d'instances de l'agent."""
+        
+        super().__init__(env)
+
+        self.conf = OmegaConf.load(str(CONFIG_PATH)) # On charge le fichier de config
+        """@private"""
+        self.c = self.conf.main_agent
+        """@private"""
+        self.path_lookahead = self.c.path_lookahead
+        """@private"""
+        self.obs = None
+        """@private"""
+        self.isEnd = False
+        """@private"""
+        self.name = "The Winners"
+        """@private"""
+        
+        
+        # Architecture en Wrappers
+        
+        
+        # 1. Le Noyau (gère volant, pédales)
+        pilote = BasePilot(self.conf)
+        
+        #2.le Nitro
+        pilote=AgentNitro(pilote,self.conf.nitro)
+        
+        #3.Les items
+        pilote=AgentItems(pilote,self.conf.powerup_type,self.conf.steering)
+        
+        # 4. Le Drift
+        pilote = AgentDrift(pilote, self.conf.drift)
+        
+        # 5. L'Esquive Adversaire 
+        pilote = AgentEsquiveAdv(pilote, self.conf.opponent, self.conf.steering)
+        
+        # 6. L'Esquive Banane 
+        pilote = AgentBanana(pilote, self.conf.banana, self.conf.steering)
+        
+        # 7. La Sécurité Bord de piste (Empêche de tomber dans le vide en esquivant)
+        pilote = AgentEdge(pilote, self.conf.edge, self.conf.steering)
+        
+        # 8. Le Rescue (annule TOUT si on est bloqué dans un mur)
+        self.final_pilot = AgentRescue(pilote, self.conf.rescue)
+        
+        """@private"""
+        # (Les experts ne sont plus appelés individuellement ici, ils sont emboîtés)
+        
+    def reset(self) -> None:
+        """Réinitialise les variables d'instances de l'agent en début de course."""
+        self.obs, _ = self.env.reset()
+        self.isEnd = False
+        
+        # Réinitialiser la dernière poupée (Rescue) va réinitialiser toutes les autres en cascade !
+        self.final_pilot.reset()
+        
+    def endOfTrack(self) -> bool:
+        """Indique si la course est fini."""
+        return self.isEnd
+
+    def choose_action(self,obs : dict) -> dict:
+        """
+        Renvoie les différentes actions à réaliser.
+        La décision traverse toutes les couches de wrappers.
+
+        Args:
+            obs(dict) : Les données de télémétrie fournies par le simulateur.
+
+        Returns:
+            dict : Le dictionnaire d'actions (accélération, direction, nitro, etc.).
+        """
+        
+        return self.final_pilot.choose_action(obs)

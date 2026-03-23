@@ -5,10 +5,12 @@ class AgentRescue:
     Module Agent Expert Rescue : Gère la logique de détection et de réaction face au blocage
     """
     
-    def __init__(self,config : DictConfig) -> None:
+    def __init__(self,wrapped_pilot,config : DictConfig) -> None:
         
         """Initialise les variables d'instances de l'agent expert"""
         
+        self.pilot=wrapped_pilot
+
         self.c = config
         """@private"""
         self.agent_positions = []
@@ -27,7 +29,7 @@ class AgentRescue:
     def reset(self) -> None:
 
         """Réinitialise les variables d'instances de l'agent expert"""
-        
+        self.pilot.reset()
         self.agent_positions = []
         self.times_blocked = 0
         self.recovery_steer = None
