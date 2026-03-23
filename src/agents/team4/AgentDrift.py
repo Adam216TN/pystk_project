@@ -84,7 +84,8 @@ class AgentDrift:
         
         """
         action = self.pilot.choose_action(obs)
-
+        steer=action["steer"]
+        vel=obs.get("velocity",[0.0,0.0,0.0])
         #Appel de la fonction qui affirme si le drift est possible
         trigger = self.must_drift(obs, steer, vel)
         
