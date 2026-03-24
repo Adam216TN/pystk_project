@@ -184,8 +184,6 @@ class AgentBanana:
         if mode == "SINGLE" and abs(b_x) >= self.c.limite_banane_single and self.lock_mode != "LIGNE":
             if self.dodge_timer <= 0:
                 return action
-        # On force l'annulation du comportement de l'adversaire ou du drift en dessous
-        self.pilot.reset()
 
         if mode == "SINGLE" and self.lock_mode != "LIGNE": # Si on a capte un cas d'une banane seule et qu'on était pas déjà dans une situation d'esquive de barrage
 

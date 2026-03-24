@@ -21,7 +21,7 @@ __all__ = ["Agent4"]
 class BasePilot:
     """
     Module Pilote de Base (Le cœur de l'agent).
-    Gère la direction normale, la vitesse, la nitro et l'utilisation des items.
+    Gère la direction normale, la vitesse.
     """
 
     def __init__(self, config):

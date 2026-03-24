@@ -91,7 +91,6 @@ class AgentRescue:
         stuck = self.is_stuck(distance,speed)
 
         if stuck or self.recovery_cd > 0:
-            self.pilot.reset()
 
             if self.recovery_cd > 0:
                 self.recovery_cd -= 1 #Si on est déjà en recovery on continue dans le même sens

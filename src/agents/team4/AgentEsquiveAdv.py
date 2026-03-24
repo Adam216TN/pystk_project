@@ -74,8 +74,6 @@ class AgentEsquiveAdv:
         danger_adv, a_x,a_z = self.esquive_adv(obs)
             
         if danger_adv:
-
-            self.pilot.reset()
             
             points = obs.get("paths_start", [])
             if len(points) > 2:

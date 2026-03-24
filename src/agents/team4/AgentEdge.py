@@ -53,9 +53,6 @@ class AgentEdge:
         # Vérification de la sortie de piste imminente
         if self.conf.epsilon_limite_min <= marge_securite <= self.conf.epsilon_limite_max :
 
-            #  SÉCURITÉ WRAPPER
-            # Si on frôle le vide, on annule les esquives des autres agents en dessous
-            self.pilot.reset()
 
             #print(f"Limite de sortie = {marge_securite}")
             
