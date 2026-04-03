@@ -12,18 +12,15 @@ from pathlib import Path
 # Append the "src" folder to sys.path.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "src")))
 
-from agents.team1.agent1 import Agent1
-from agents.team2.agent2 import Agent2
-from agents.team3.agent3 import Agent3
+
 from agents.team4.agent4 import Agent4
-from agents.team5.agent5 import Agent5
 from agents.team6.agent6 import Agent6
 from pystk2_gymnasium.envs import STKRaceMultiEnv, AgentSpec
 from pystk2_gymnasium.definitions import CameraMode
 
 from scores import Scores, output_html
 
-MAX_TEAMS = 6
+MAX_TEAMS = 2
 MAPS = ['abyss', 'black_forest', 'candela_city', 'cocoa_temple', 'cornfield_crossing', 'fortmagma', 'gran_paradiso_island', 'hacienda', 'lighthouse', 'mines', 'minigolf', 'olivermath', 'ravenbridge_mansion', 'sandtrack', 'scotland', 'snowmountain', 'snowtuxpeak', 'stk_enterprise', 'volcano_island', 'xr591', 'zengarden']
 MAX_STEPS = 2000
 NB_REPEAT = 4
@@ -65,11 +62,7 @@ def create_race(map=None):
     agents = []
     names = []
 
-    agents.append(Agent1(env, path_lookahead=3))
-    agents.append(Agent2(env, path_lookahead=3))
-    agents.append(Agent3(env, path_lookahead=3))
     agents.append(Agent4(env, path_lookahead=3))
-    agents.append(Agent5(env, path_lookahead=3))
     agents.append(Agent6(env, path_lookahead=3))
     np.random.shuffle(agents)
 
