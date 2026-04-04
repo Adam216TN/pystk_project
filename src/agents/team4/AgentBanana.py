@@ -98,8 +98,9 @@ class AgentBanana:
                 pos_x = items_pos[i][0] # On récupère le décalage latéral 
                 pos_z = items_pos[i][2] # On récupère la profondeur
 
-                nx, nz = self.rotate(pos_x,pos_z,-angle_piste) # Rotation inverse pour ramener sur l'axe z
-
+                #nx, nz = self.rotate(pos_x,pos_z,-angle_piste) # Rotation inverse pour ramener sur l'axe z
+                nx, nz = pos_x, pos_z
+                
                 dist_obj_centre= abs(center_path+nx) #Calcul de la distance absolu de l'objet
 
                 if dist_obj_centre > limit_path: # Si l'objet est hors des limites de la piste, on ne le prend pas en compte
