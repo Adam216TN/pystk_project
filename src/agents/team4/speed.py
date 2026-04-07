@@ -37,10 +37,24 @@ class SpeedController:
 
         """
         points = obs.get("paths_start",[]) # On récupère la liste des points
+        dx = points[3][0] #on prend le decalage latéral x du troisieme point devant l'agent
 
-        k = abs(compute_curvature(points[1:5][:3]))
+        a = abs(dx)
+        #print("décal x = ",a)
 
-        v_test = np.clip(self.amax/np.sqrt(1+k),0, self.amax)
+        if a < 4.0:
+            return 0.98, False
+        return 1.0, False
+        if a < 6.0 :
+            return 1.0, False
 
-        return np.clip(v_test*self.g,0,self.amax), False #on ajoute un gain 
-        
+        if a > 10.0:
+            return 0.05, True
+
+        if (a > 5.0 and a < 8.0):
+            return 0.55, False
+
+        if (a > 8.0 and a < 10.0):
+            return 0.3, True
+
+        return 1.0, False
