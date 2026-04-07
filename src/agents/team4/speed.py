@@ -1,74 +1,58 @@
-from omegaconf import DictConfig
 import numpy as np
-from utils.track_utils import compute_curvature
+from omegaconf import DictConfig
 
 class SpeedController:
-    
     """
-    Module SpeedController : Gère la logique d'accélération
+    Module SpeedController : Gère la logique d'accélération basée sur l'écart latéral.
     """
 
-    def __init__(self,config : DictConfig) -> None:
-        """Initialise les variables d'instances de l'agent."""
-        
+    def __init__(self, config: DictConfig) -> None:
+        """Initialise les variables d'instances de l'agent expert."""
         self.c = config
-        """@private"""
-        self.g = self.c.speed_gain
-        """@private"""
-        self.amax = self.c.acceleration_max
-        """@private"""
-        self.azero = self.c.acceleration_czero
-        """@private"""
-        self.alow = self.c.acceleration_low 
-        """@private"""
-        self.amid = self.c.acceleration_mid 
-        """@private"""
-        self.smax = self.c.seuil_decalage_max
-        """@private"""
-        self.smid = self.c.seuil_decalage_mid
-        """"@private"""
-        self.slow = self.c.seuil_decalage_low
-        """@private"""
-        self.smin = self.c.seuil_decalage_min
-        """@private"""
-    
+
     def reset(self) -> None:
-        """Réinitialise les variables d'instances de l'agent expert"""
+        """Réinitialise les variables d'instances de l'agent expert."""
         pass
-    
-    def manage_speed(self,obs:dict) -> tuple[float,bool]:
+
+    def manage_speed(self, obs: dict) -> tuple[float, bool]:
         """
-        Gère l'accélération.
+        Gère l'accélération en fonction de l'écart latéral du chemin.
 
         Args:
-            
-            obs(dict) : Les données fournies par le simulateur.
+            obs (dict) : Les données fournies par le simulateur.
         
         Returns:
-            
-            float: Valeur représentant l'accélération.
-            bool: Variable permettant d'activer ou non le brake.
-
+            tuple[float, bool]: Valeur de l'accélération (float) et activation du frein (bool).
         """
-        points = obs.get("paths_start",[]) # On récupère la liste des points
-        dx = points[3][0] #on prend le decalage latéral x du troisieme point devant l'agent
+        # 1. Extraction sécurisée de la vitesse (composante z)
+        vel = obs.get("velocity", [0.0, 0.0, 0.0])
+        vel = np.asarray(vel).reshape(-1)
+        speed = float(vel[2]) if vel.size > 2 else 0.0
 
+        # 2. Extraction du décalage latéral (x) du 4ème point (index 3)
+        points = obs.get("paths_start", [])
+        if len(points) > 3:
+            dx = points[3][0]
+        else:
+            dx = 0.0 
+            
         a = abs(dx)
-        #print("décal x = ",a)
 
-        if a < 4.0:
-            return 0.98, False
-        return self.amax, False
-        if a < self.slow :
-            return self.amax, False
+        # 3. Récupération du seuil depuis ta configuration
+        v_seuil = self.c.vitesse_seuil
 
-        if a > self.smax:
-            return self.azero, True
+        # 4. Logique d'accélération et de freinage
+        if a < 6.0 and speed > v_seuil:
+            return 1.0, False
 
-        if (a > self.smin and a < self.smid):
-            return self.amid, False
+        if a > 10.0 and speed > v_seuil:
+            return 0.05, True
 
-        if (a > self.smid and a < self.smax):
-            return self.alow, True
+        if (5.0 < a < 8.0) and speed > (v_seuil - 2.0):
+            return 0.55, False
 
-        return self.amax, False
+        if (8.0 < a < 10.0) and speed > (v_seuil - 1.0):
+            return 0.3, True
+
+        # Comportement par défaut
+        return 1.0, False
