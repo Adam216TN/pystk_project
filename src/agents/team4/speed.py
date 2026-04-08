@@ -1,58 +1,46 @@
-import numpy as np
 from omegaconf import DictConfig
+import numpy as np
+from utils.track_utils import compute_curvature
 
 class SpeedController:
+    
     """
-    Module SpeedController : Gère la logique d'accélération basée sur l'écart latéral.
+    Module SpeedController : Gère la logique d'accélération
     """
 
-    def __init__(self, config: DictConfig) -> None:
-        """Initialise les variables d'instances de l'agent expert."""
+    def __init__(self,config : DictConfig) -> None:
+        """Initialise les variables d'instances de l'agent."""
+        
         self.c = config
-
+        """@private"""
+        self.g = self.c.speed_gain
+        """@private"""
+        self.amax = self.c.acceleration_max
+        """@private"""
+    
     def reset(self) -> None:
-        """Réinitialise les variables d'instances de l'agent expert."""
+        """Réinitialise les variables d'instances de l'agent expert"""
         pass
-
-    def manage_speed(self, obs: dict) -> tuple[float, bool]:
+    
+    def manage_speed(self,obs:dict) -> tuple[float,bool]:
         """
-        Gère l'accélération en fonction de l'écart latéral du chemin.
+        Gère l'accélération.
 
         Args:
-            obs (dict) : Les données fournies par le simulateur.
+            
+            obs(dict) : Les données fournies par le simulateur.
         
         Returns:
-            tuple[float, bool]: Valeur de l'accélération (float) et activation du frein (bool).
-        """
-        # 1. Extraction sécurisée de la vitesse (composante z)
-        vel = obs.get("velocity", [0.0, 0.0, 0.0])
-        vel = np.asarray(vel).reshape(-1)
-        speed = float(vel[2]) if vel.size > 2 else 0.0
-
-        # 2. Extraction du décalage latéral (x) du 4ème point (index 3)
-        points = obs.get("paths_start", [])
-        if len(points) > 3:
-            dx = points[3][0]
-        else:
-            dx = 0.0 
             
-        a = abs(dx)
+            float: Valeur représentant l'accélération.
+            bool: Variable permettant d'activer ou non le brake.
 
-        # 3. Récupération du seuil depuis ta configuration
-        v_seuil = self.c.vitesse_seuil
+        """
+        points = obs.get("paths_start",[]) # On récupère la liste des points
 
-        # 4. Logique d'accélération et de freinage
-        if a < 6.0 and speed > v_seuil:
-            return 1.0, False
+        k = abs(compute_curvature(points[1:5]))
 
-        if a > 10.0 and speed > v_seuil:
-            return 0.05, True
+        v_test = np.clip(self.amax/np.sqrt(1+k),0, self.amax)
 
-        if (5.0 < a < 8.0) and speed > (v_seuil - 2.0):
-            return 0.55, False
-
-        if (8.0 < a < 10.0) and speed > (v_seuil - 1.0):
-            return 0.3, True
-
-        # Comportement par défaut
-        return 1.0, False
+        return np.clip(v_test*self.g,0,self.amax), False #on ajoute un gain 
+        
