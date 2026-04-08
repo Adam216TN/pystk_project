@@ -11,6 +11,7 @@ from .AgentItems import AgentItems
 from .AgentEdge import AgentEdge
 from .AgentEnd import AgentEnd
 from .AgentStart import AgentStart
+from .AgentApex import AgentApex
 from omegaconf import OmegaConf
 from pathlib import Path
 
@@ -64,6 +65,8 @@ class Agent4(KartAgent):
         self.expert_end = AgentEnd(self.conf.end)
         """@private"""
         self.expert_start = AgentStart(self.conf.start)
+        """@private"""
+        self.expert_apex = AgentApex(self.conf.apex,self.conf.steering,self.path_lookahead)
         """@private"""
         self.skin = 'adiumy'
         """@private"""        
@@ -127,6 +130,9 @@ class Agent4(KartAgent):
         # Appel en priorité de la fonction rescue
         is_stuck, action_stuck = self.expert_rescue.choose_action(obs,steering)
         if is_stuck and obs['distance_down_track'] >= self.c.seuil_distance_stuck:
+            self.expert_banana_dodge.reset()
+            self.expert_esquive_adv.reset()
+            self.expert_apex.reset()
             return action_stuck
         
         # Appel de la fonction edge
@@ -141,12 +147,19 @@ class Agent4(KartAgent):
         danger_banane, action_banane = self.expert_banana_dodge.choose_action(obs,gx,gz,acceleration)
         if danger_banane:
             self.expert_esquive_adv.reset()
+            self.expert_apex.reset()
             return action_banane
         
         # Appel de la fonction esquive adversaire
         danger_adv, action_adv = self.expert_esquive_adv.choose_action(obs,gx,gz,acceleration)
         if danger_adv:
+            self.expert_apex.reset()
             return action_adv
+        
+        # Appel de apex
+        """apex, action_apex = self.expert_apex.choose_action(obs,acceleration)
+        if apex:
+            return action_apex"""
         
         # Mécanisme Anti Vibration
         epsilon = self.c.epsilon
